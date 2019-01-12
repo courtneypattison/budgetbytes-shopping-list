@@ -6,31 +6,94 @@ import argparse
 from fractions import Fraction
 import sys
 
-import requests
+from measurement.measures import Volume
 import bs4
+import requests
+
+# todo merge same items, convert units if mergable
+# convert fractions to mixed fractions
+
+# things we are very unlikely to need to purchase
+EXCLUDE_INGREDIENTS = set([
+    'salt',
+    'salt and pepper',
+    'salt & pepper',
+    'freshly cracked black pepper',
+    'freshly cracked pepper',
+    'water',
+    'hot water',
+    'pinch of salt',
+    'pinch of salt and pepper',
+    'freshly ground pepper',
+])
+
+UNIMPORTANT_WORDS = [
+    '(optional)',
+    ', minced',
+    ', sliced',
+    ', chopped',
+    '(any shape)',
+    ', divided',
+    '*',
+    '.',
+    ', uncooked',
+    'sliced',
+    'to taste',
+    ', optional',
+]
+
+def format_unit(unit):
+    unit = unit.rstrip('s').lower()
+    aliases = {
+        'us_g': ['gallon'],
+        'us_qt': ['quart'],
+        'us_pint': ['pint'],
+        'us_cup': ['cup'],
+        'us_oz': ['oz', 'ounce'],
+        'us_tbsp': ['tbsp', 'tablespoon'],
+        'us_tsp': ['teaspoon', 'tsp'],
+        'l': ['l', 'liter', 'litre'],
+    }
+    translation = { v: k for k, vs in aliases.items() for v in vs}
+    if unit in translation:
+        return translation[unit]
+    return unit
+
 
 def parse_ingredient(ingredient, adjustment):
     fields = dict()
     for field in ('name', 'amount', 'unit'):
         a = ingredient.findChild('span', attrs={
             'class': 'wprm-recipe-ingredient-%s' % field})
-        fields[field] = a.text if a is not None else ''
+        fields[field] = a.text if a else ''
 
     # accept fractions and skip 'pinch' of salt etc.
-    if fields['amount'].replace('/', '').isdigit():
+    if fields['amount'].replace('/', '').strip().isdigit():
         amount_per_serving = Fraction(fields['amount']) 
         fields['amount'] = amount_per_serving * adjustment
     else: # assume it is some informal unit (pinch etc.)
-        fields['unit'] = fields['amount'] + ':' + fields['unit']
+        informal_unit = fields['amount'].strip()
+        formal_unit = fields['unit'].strip()
+        if formal_unit and informal_unit:
+            fields['unit'] = informal_unit + ':' + formal_unit 
+        else:
+            fields['unit'] = informal_unit or formal_unit
         fields['amount'] = adjustment
 
-    fields['name'] = fields['name'].lower()
+    fields['unit'] = fields['unit'].replace('.', '').strip().lower()
+    name = fields['name'].lower()
+    for word in UNIMPORTANT_WORDS:
+        name = name.replace(word, '')
+    fields['name'] = name.strip()
     return fields
 
 def parse_recipe(site, desired_servings):
     site_code = bs4.BeautifulSoup(site.text, 'html.parser')
-    servings = int(site_code.find('span', attrs={
-        'class': 'wprm-recipe-servings'}).text)
+    serving_field = site_code.find('span', attrs={'class': 'wprm-recipe-servings'})
+    if serving_field:
+        servings = int(serving_field.text)
+    else:
+        servings = desired_servings
     output = {'title': site_code.find('h1', attrs={
         'class': 'title'}).text}
     ingredient_list = []
@@ -38,11 +101,12 @@ def parse_recipe(site, desired_servings):
     for ingredient in site_code.find_all(
             'li', attrs={'class': 'wprm-recipe-ingredient'}):
         fields = parse_ingredient(ingredient, Fraction(desired_servings, servings))
-        ingredient_list.append(fields)
+        if fields['name'] not in EXCLUDE_INGREDIENTS:
+            ingredient_list.append(fields)
     return output
 
 def format_ingredients(ingredients):
-    return ('\n'.join(' - {amount} {unit} {name}'.format(**ingredient)
+    return ('\n'.join(' - {amount} [{unit}] {name}'.format(**ingredient)
         for ingredient in ingredients))
 
 def format_recipes(recipes):
@@ -80,12 +144,23 @@ def to_shopping_list(recipes):
 def format_shopping_list(shopping_list):
     return 'Shopping List\n' + format_ingredients(shopping_list)
 
+def read_choices(fromfile):
+    choices = []
+    if fromfile:
+        for line in fromfile:
+            if line.strip().startswith('+'):
+                name, _ = line.strip(' +\t').split(' ')
+                choices.append(name)
+    return choices
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('url', nargs='+')
+    parser.add_argument('url', nargs='*')
     parser.add_argument('--servings', type=int, default=6)
+    parser.add_argument('--fromfile', type=argparse.FileType('r'))
     args = parser.parse_args()
-    urls = ['https://www.budgetbytes.com/' + url for url in args.url]
+    urls = ['https://www.budgetbytes.com/' + url for url in (args.url + read_choices(args.fromfile))]
     text = format_shopping_list(to_shopping_list(get_recipes(urls, args.servings)))
     print(text)
 

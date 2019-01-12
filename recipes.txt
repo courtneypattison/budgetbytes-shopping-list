@@ -1,0 +1,54 @@
+[Noodles]
+goulash 6
+ravioli-with-sage-brown-butter-sauce-spinach-and-walnuts 4
+one-pot-sausage-sun-dried-tomato-pasta 8
+creamy-chicken-fajita-pasta 4
+skillet-cheeseburger-pasta 4
+spaghetti-with-vegetable-meat-sauce 4
+one-pot-roasted-red-pepper-pasta 6
+three-pepper-pasta-with-crispy-pepperoni 6
+butternut-squash-pasta-salad 8
+lime-shrimp-dragon-noodles 4
+snap-challenge-vegetable-stir-fry-noodles 6
+spicy-noodles 4
+
+[Grain]
+sushi-bowls-sriracha-mayo 4
+italian-sausage-stuffed-zucchini 8
+sweet-chili-tofu-bowls 4
+pan-fried-sesame-tofu-with-broccoli 4
+spinach-and-chickpea-rice-pilaf 6
+yellow-rice-chicken-skillet 4
+poor-mans-burrito-bowls 6
+
+[Soup and stew]
++vegan-winter-lentil-stew 8
++basic-chili 6
++easy-egg-drop-soup 6
++thai-coconut-curry-carrot-soup 6
++vegetarian-15-bean-soup 8
++chicken-dumplings-vegetables 8
++can-eat-cabbage-soup 8
++smoky-potato-chickpea-stew 6
++thai-curry-vegetable-soup 4
++moroccan-lentil-vegetable-stew 8
++chicken-pumpkin-soup 6
+
+[Salad]
++spinach-orzo-salad-balsamic-vinaigrette 8
++super-fresh-cucmber-salad 6
++roasted-sweet-potato-rainbow-salad-lime-crema 6
++broccoli-salad-honey-yogurt-dressing 4
++simple-tomato-cucumber-salad 4
++quinoa-tabbouleh 8
++pasta-salad-with-sausage-and-arugula 6
++mediterranean-farro-salad-with-spiced-chickpeas 4
+
+[Protein]
+roasted-eggplant-meat-sauce 4
+roasted-bratwurst-peppers-onions 5
+curried-chickpeas-spinach 4
+chorizo-sweet-potato-enchiladas 8
+sriracha-egg-salad 4
+savory-cabbage-pancakes-okonomiyaki 6
+veggie-packed-freezer-ready-breakfast-sandwiches 6

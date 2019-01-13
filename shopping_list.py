@@ -69,13 +69,13 @@ def parse_ingredient(ingredient, adjustment):
 
     # accept fractions and skip 'pinch' of salt etc.
     if fields['amount'].replace('/', '').strip().isdigit():
-        amount_per_serving = Fraction(fields['amount']) 
+        amount_per_serving = Fraction(fields['amount'])
         fields['amount'] = amount_per_serving * adjustment
     else: # assume it is some informal unit (pinch etc.)
         informal_unit = fields['amount'].strip()
         formal_unit = fields['unit'].strip()
         if formal_unit and informal_unit:
-            fields['unit'] = informal_unit + ':' + formal_unit 
+            fields['unit'] = informal_unit + ':' + formal_unit
         else:
             fields['unit'] = informal_unit or formal_unit
         fields['amount'] = adjustment
@@ -87,20 +87,24 @@ def parse_ingredient(ingredient, adjustment):
     fields['name'] = name.strip()
     return fields
 
-def parse_recipe(site, desired_servings):
+def parse_recipe(site, desired_servings=None):
     site_code = bs4.BeautifulSoup(site.text, 'html.parser')
     serving_field = site_code.find('span', attrs={'class': 'wprm-recipe-servings'})
     if serving_field:
         servings = int(serving_field.text)
     else:
-        servings = desired_servings
+        servings = desired_servings or 1
     output = {'title': site_code.find('h1', attrs={
         'class': 'title'}).text}
     ingredient_list = []
     output['ingredients'] = ingredient_list
     for ingredient in site_code.find_all(
             'li', attrs={'class': 'wprm-recipe-ingredient'}):
-        fields = parse_ingredient(ingredient, Fraction(desired_servings, servings))
+        if desired_servings:
+            adjustment = Fraction(desired_servings, servings)
+        else:
+            adjustment = 1
+        fields = parse_ingredient(ingredient, adjustment)
         if fields['name'] not in EXCLUDE_INGREDIENTS:
             ingredient_list.append(fields)
     return output
@@ -113,9 +117,9 @@ def format_recipes(recipes):
     return ('\n'.join(r['title'] + '\n' +
         format_ingredients(r['ingredients']) for r in recipes))
 
-def get_recipes(recipes, servings):
+def get_recipes(recipes):
     output = []
-    for recipe in recipes:
+    for recipe, servings in recipes:
         site = requests.get(recipe)
         if site.status_code == requests.codes.ok:
             output.append(parse_recipe(site, servings))
@@ -149,19 +153,30 @@ def read_choices(fromfile):
     if fromfile:
         for line in fromfile:
             if line.strip().startswith('+'):
-                name, _ = line.strip(' +\t').split(' ')
+                name = line.strip(' +\t')
                 choices.append(name)
     return choices
 
 
+def parse_recipe_args(args, site='https://www.budgetbytes.com/'):
+    recipes = []
+    for url in args:
+        if ':' in url:
+            recipe, servings = url.split(':')
+            servings = int(servings)
+            recipes.append((site + recipe, servings))
+        else:
+            recipes.append((site + url, None))
+    return recipes
+            
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('url', nargs='*')
-    parser.add_argument('--servings', type=int, default=6)
     parser.add_argument('--fromfile', type=argparse.FileType('r'))
     args = parser.parse_args()
-    urls = ['https://www.budgetbytes.com/' + url for url in (args.url + read_choices(args.fromfile))]
-    text = format_shopping_list(to_shopping_list(get_recipes(urls, args.servings)))
+    recipes = parse_recipe_args(args.url + read_choices(args.fromfile))
+    text = format_shopping_list(to_shopping_list(get_recipes(recipes)))
     print(text)
 
 if __name__ == "__main__":
